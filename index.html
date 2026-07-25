@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#120b26">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>🌲 הטיול שלנו ליער השחור</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#faf9ff; --card:#ffffff; --ink:#14101f; --muted:#6b6480;
+    --green:#7c3aed; --green-dark:#5b21b6;
+    --primary:#7c3aed; --pink:#ec4899; --orange:#fb923c;
+    --allegra:#8b5cf6; --sonneck:#16a34a; --lumi:#f59e0b;
+    --sky:#f3e8ff; --accent:#ec4899;
+    --shadow:0 6px 20px rgba(88,60,160,.12);
+    --radius:24px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{
+    margin:0; font-family:'Heebo',-apple-system,'Segoe UI',sans-serif; color:var(--ink);
+    background:
+      radial-gradient(600px 420px at 92% -5%, #f3e8ff 0%, transparent 60%),
+      radial-gradient(520px 380px at -8% 28%, #ffe4f1 0%, transparent 60%),
+      radial-gradient(460px 340px at 108% 65%, #fff1e4 0%, transparent 60%),
+      var(--bg);
+    background-attachment:fixed;
+    min-height:100vh; padding-bottom:40px;
+  }
+  .wrap{max-width:640px; margin:0 auto; padding:0 14px}
+
+  /* ---------- header ---------- */
+  header{
+    background:
+      radial-gradient(420px 260px at 85% 0%, rgba(124,58,237,.55) 0%, transparent 65%),
+      radial-gradient(380px 240px at 10% 20%, rgba(236,72,153,.4) 0%, transparent 60%),
+      radial-gradient(300px 220px at 55% 110%, rgba(251,146,60,.35) 0%, transparent 60%),
+      #120b26;
+    color:#fff; border-radius:0 0 32px 32px; padding:20px 0 22px; box-shadow:var(--shadow);
+    position:relative; overflow:hidden;
+  }
+  header .trees{position:absolute; bottom:-6px; left:0; right:0; font-size:26px; opacity:.18; white-space:nowrap; pointer-events:none}
+  h1{margin:0; font-size:1.55rem; font-weight:900; text-align:center; letter-spacing:-.02em}
+  .subtitle{text-align:center; font-size:.85rem; opacity:.85; margin-top:2px}
+  .countdown{
+    margin:12px auto 0; width:fit-content;
+    background:linear-gradient(90deg,#7c3aed,#ec4899);
+    border-radius:999px; padding:6px 18px; font-weight:800; font-size:.95rem;
+    box-shadow:0 4px 16px rgba(236,72,153,.4);
+  }
+
+  /* ---------- progress bar ---------- */
+  .progress-zone{margin-top:14px; padding:0 6px}
+  .track-outer{position:relative; padding:26px 8px 6px}
+  .track{
+    position:relative; height:10px; border-radius:999px; background:#ffffff55;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.15);
+  }
+  .track-fill{
+    position:absolute; top:0; right:0; height:100%; border-radius:999px;
+    background:linear-gradient(270deg,#ec4899,#fb923c); transition:width .6s ease; min-width:0;
+  }
+  .dots{display:flex; justify-content:space-between; position:absolute; inset:0; align-items:center; padding:0 2px}
+  .dot{
+    width:22px; height:22px; border-radius:50%; background:#fff; border:3px solid #ffffff90;
+    display:flex; align-items:center; justify-content:center; font-size:.62rem; font-weight:900; color:var(--green-dark);
+    cursor:pointer; position:relative; transition:transform .15s; flex:none;
+  }
+  .dot.past{background:#fbcfe8}
+  .dot.selected{transform:scale(1.35); border-color:#fff; box-shadow:0 0 0 4px rgba(255,255,255,.35); z-index:2}
+  .dot.done::after{content:"⭐"; position:absolute; bottom:-15px; font-size:.6rem}
+  .dot .house{
+    position:absolute; top:-24px; font-size:15px; line-height:1;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3));
+  }
+  .house svg{width:18px; height:18px}
+  .legend{display:flex; gap:10px; justify-content:center; margin-top:16px; font-size:.68rem; flex-wrap:wrap}
+  .legend span{display:flex; align-items:center; gap:4px; background:rgba(255,255,255,.16); border-radius:999px; padding:2px 9px}
+  .legend i{width:9px; height:9px; border-radius:50%; display:inline-block}
+
+  /* ---------- day nav ---------- */
+  .day-nav{display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px; gap:8px}
+  .day-nav button{
+    border:none; background:var(--card); box-shadow:var(--shadow); border-radius:14px;
+    font-size:1.2rem; width:44px; height:44px; cursor:pointer; color:var(--green-dark); font-weight:900;
+  }
+  .day-nav button:disabled{opacity:.3}
+  .day-title{text-align:center; flex:1}
+  .day-title .big{font-size:1.15rem; font-weight:900}
+  .day-title .small{font-size:.8rem; color:var(--muted)}
+  .today-badge{
+    display:inline-block; background:var(--accent); color:#fff; border-radius:999px;
+    font-size:.65rem; padding:1px 8px; margin-right:6px; vertical-align:middle;
+  }
+
+  /* ---------- day hero ---------- */
+  .hero{
+    background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:18px; text-align:center; margin-bottom:14px; position:relative; overflow:hidden;
+  }
+  .hero .emoji{font-size:3rem; line-height:1}
+  .hero h2{margin:6px 0 2px; font-size:1.3rem; font-weight:900}
+  .hero .area-note{color:var(--muted); font-size:.85rem}
+  .visited-btn{
+    margin-top:10px; border:2px dashed var(--green); background:#eafaf0; color:var(--green-dark);
+    border-radius:999px; padding:7px 18px; font-family:inherit; font-weight:800; font-size:.9rem; cursor:pointer;
+  }
+  .visited-btn.on{background:var(--green); color:#fff; border-style:solid}
+
+  /* ---------- attractions ---------- */
+  .section-label{font-weight:900; font-size:.95rem; margin:16px 4px 8px; display:flex; align-items:center; gap:6px}
+  .attr{
+    background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:14px; margin-bottom:10px; display:flex; gap:12px; align-items:flex-start;
+  }
+  .attr .icon{
+    width:52px; height:52px; border-radius:14px; background:var(--sky); flex:none;
+    display:flex; align-items:center; justify-content:center; font-size:1.6rem; overflow:hidden;
+  }
+  .attr .icon img{width:34px; height:34px; border-radius:8px}
+  .attr .body{flex:1; min-width:0}
+  .attr h3{margin:0 0 3px; font-size:1rem; font-weight:800}
+  .attr p{margin:0 0 8px; font-size:.83rem; color:var(--muted); line-height:1.45}
+  .attr .links{display:flex; gap:8px; flex-wrap:wrap}
+  .pill{
+    display:inline-flex; align-items:center; gap:5px; text-decoration:none; font-weight:700;
+    font-size:.78rem; border-radius:999px; padding:5px 12px; border:none; cursor:pointer; font-family:inherit;
+  }
+  .pill.site{background:#e3f2fd; color:#0d47a1}
+  .pill.waze{background:#e0f7fa; color:#006064}
+  .pill.hours{background:#fef3c7; color:#92400e}
+
+  /* ---------- hotel ---------- */
+  .hotel{
+    border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; color:#fff;
+    display:flex; align-items:center; gap:14px; cursor:pointer; margin-bottom:14px;
+    text-decoration:none; transition:transform .12s;
+  }
+  .hotel:active{transform:scale(.98)}
+  .hotel .h-icon{font-size:2rem}
+  .hotel .h-name{font-weight:900; font-size:1.02rem}
+  .hotel .h-sub{font-size:.78rem; opacity:.92}
+  .hotel .h-go{margin-right:auto; background:rgba(255,255,255,.22); border-radius:12px; padding:8px 12px; font-size:.78rem; font-weight:800; text-align:center}
+
+  /* ---------- action buttons ---------- */
+  .actions{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px}
+  .action-btn{
+    border:none; border-radius:var(--radius); box-shadow:var(--shadow); padding:12px 6px;
+    font-family:inherit; font-weight:900; font-size:.78rem; cursor:pointer; color:#fff;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .action-btn .a-emoji{font-size:1.6rem}
+  .btn-drive{background:linear-gradient(135deg,#4f46e5,#8b5cf6)}
+  .btn-food{background:linear-gradient(135deg,#db2777,#f472b6)}
+  .btn-tips{background:linear-gradient(135deg,#ea580c,#fbbf24)}
+  .btn-journal{
+    width:100%; border:none; border-radius:var(--radius); box-shadow:0 6px 20px rgba(124,58,237,.35);
+    background:linear-gradient(90deg,#7c3aed,#ec4899); color:#fff; font-family:inherit;
+    font-weight:900; font-size:1rem; padding:14px; cursor:pointer; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-itamar{
+    width:100%; border:none; border-radius:var(--radius); box-shadow:0 6px 20px rgba(234,88,12,.35);
+    background:linear-gradient(90deg,#ea580c,#fbbf24); color:#fff; font-family:inherit; text-decoration:none;
+    font-weight:900; font-size:1rem; padding:14px; cursor:pointer; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-itamar:active{transform:scale(.98)}
+
+  /* ---------- weather + trivia ---------- */
+  .wx{
+    margin-top:10px; display:inline-block; background:#e3f2fd; color:#0d47a1;
+    border-radius:999px; padding:5px 14px; font-size:.8rem; font-weight:700;
+  }
+  .trivia{
+    background:linear-gradient(135deg,#f3e8ff,#ffe4f1); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:14px 16px; margin-bottom:14px; font-size:.87rem; line-height:1.55;
+  }
+  .trivia .t-title{font-weight:900; margin-bottom:3px}
+  .sheet li .rest-time{color:#a855f7; font-size:.76rem; font-weight:700}
+  .sheet li .pill{margin-top:6px}
+
+  /* ---------- journal ---------- */
+  .j-intro{
+    background:linear-gradient(135deg,#f3e8ff,#ffe4f1); border-radius:16px; padding:10px 14px;
+    font-size:.82rem; line-height:1.5; margin-bottom:12px; color:#4c1d95;
+  }
+  .j-form{background:#f6f4fb; border-radius:16px; padding:12px; margin-bottom:14px}
+  .j-form textarea{
+    width:100%; border:2px solid #e9e4f5; border-radius:12px; padding:10px; font-family:inherit;
+    font-size:.9rem; min-height:70px; resize:vertical; background:#fff;
+  }
+  .j-form textarea:focus{outline:none; border-color:#a78bfa}
+  .j-photo-row{display:flex; gap:8px; margin:10px 0; flex-wrap:wrap}
+  .j-thumb{width:64px; height:64px; border-radius:12px; object-fit:cover; border:2px solid #e9e4f5}
+  .j-btns{display:flex; gap:8px; flex-wrap:wrap}
+  .j-btn{
+    border:none; border-radius:999px; padding:8px 14px; font-family:inherit; font-weight:800;
+    font-size:.8rem; cursor:pointer;
+  }
+  .j-btn.cam{background:#ede9fe; color:#5b21b6}
+  .j-btn.save{background:linear-gradient(90deg,#7c3aed,#ec4899); color:#fff; margin-right:auto}
+  .j-chips{display:flex; gap:6px; flex-wrap:wrap; margin:8px 0}
+  .j-chips .j-chip-label{width:100%; font-size:.72rem; color:var(--muted); font-weight:700}
+  .j-chip{
+    background:#fff; border:2px solid #e9e4f5; border-radius:999px; padding:5px 12px;
+    font-family:inherit; font-size:.74rem; font-weight:700; cursor:pointer; color:#4c1d95;
+  }
+  .j-chip.on{background:linear-gradient(90deg,#7c3aed,#ec4899); color:#fff; border-color:transparent}
+  .j-export{
+    width:100%; border:none; border-radius:14px; background:#14101f; color:#fff;
+    font-family:inherit; font-weight:800; font-size:.88rem; padding:12px; cursor:pointer; margin-bottom:12px;
+  }
+  .j-export:disabled{opacity:.6}
+  .prev-bg{
+    position:fixed; inset:0; background:rgba(10,6,20,.75); z-index:80;
+    display:flex; flex-direction:column; padding:14px; backdrop-filter:blur(3px);
+  }
+  .prev-title{color:#fff; font-weight:900; text-align:center; margin-bottom:8px; font-size:.95rem}
+  .prev-frame{flex:1; border:none; border-radius:18px; background:#fff; width:100%}
+  .prev-actions{display:flex; gap:10px; margin-top:10px}
+  .prev-actions button{flex:1; border:none; border-radius:999px; padding:12px; font-family:inherit; font-weight:900; font-size:.95rem; cursor:pointer}
+  .prev-share{background:linear-gradient(90deg,#7c3aed,#ec4899); color:#fff}
+  .prev-close{background:#fff; color:#14101f}
+  .j-entry{background:#fff; border:1px solid #eee7fa; border-radius:16px; padding:12px; margin-bottom:10px; box-shadow:var(--shadow)}
+  .j-entry .j-meta{font-size:.72rem; color:var(--muted); margin-bottom:4px; display:flex; align-items:center; gap:6px}
+  .j-entry .j-day-badge{background:#f3e8ff; color:#6d28d9; border-radius:999px; padding:1px 8px; font-weight:800}
+  .j-entry .j-text{font-size:.9rem; line-height:1.5; white-space:pre-wrap}
+  .j-entry .j-photos{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+  .j-entry .j-photos img{width:84px; height:84px; border-radius:12px; object-fit:cover; cursor:pointer}
+  .j-entry .j-actions{display:flex; gap:8px; margin-top:8px}
+  .j-entry .j-actions button{border:none; background:#f6f4fb; border-radius:999px; padding:5px 12px; font-family:inherit; font-size:.75rem; font-weight:700; cursor:pointer; color:#4c1d95}
+  .j-entry textarea{
+    width:100%; border:2px solid #e9e4f5; border-radius:12px; padding:10px; font-family:inherit;
+    font-size:.9rem; min-height:70px; resize:vertical; background:#fff; margin-bottom:6px;
+  }
+  .j-entry textarea:focus{outline:none; border-color:#a78bfa}
+  .j-entry.editing{border:2px solid #a78bfa}
+
+  /* ---------- bottom sheet ---------- */
+  .sheet-bg{position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:50}
+  .sheet-bg.open{display:block}
+  .sheet{
+    position:fixed; bottom:0; left:0; right:0; z-index:51; background:#fff;
+    border-radius:26px 26px 0 0; padding:10px 18px 30px; max-height:75vh; overflow-y:auto;
+    transform:translateY(105%); transition:transform .3s ease;
+    max-width:640px; margin:0 auto;
+  }
+  .sheet.open{transform:translateY(0)}
+  .sheet .grab{width:44px; height:5px; border-radius:99px; background:#ddd; margin:4px auto 12px}
+  .sheet h3{margin:0 0 10px; font-size:1.1rem; font-weight:900; display:flex; gap:8px; align-items:center}
+  .sheet ul{margin:0; padding:0; list-style:none}
+  .sheet li{
+    background:#f6f8f6; border-radius:14px; padding:10px 12px; margin-bottom:8px;
+    font-size:.88rem; line-height:1.5;
+  }
+  .sheet li b{color:var(--green-dark)}
+
+  /* ---------- flight card ---------- */
+  .flight{
+    background:linear-gradient(135deg,#0d47a1,#1976d2); color:#fff; border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:16px; margin-bottom:14px; display:flex; justify-content:space-around; text-align:center;
+  }
+  .flight .f-part .f-l{font-size:.72rem; opacity:.85}
+  .flight .f-part .f-t{font-size:1.3rem; font-weight:900}
+  .flight .f-mid{font-size:1.5rem; align-self:center}
+
+  .confetti{position:fixed; top:-30px; font-size:1.4rem; z-index:99; pointer-events:none; animation:fall 2.4s linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
+
+  /* ---------- day map ---------- */
+  .map-card{
+    background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:12px; margin-bottom:14px; overflow:hidden;
+  }
+  .daymap{height:280px; border-radius:16px; overflow:hidden; background:#eee7fa}
+  .map-hint{font-size:.74rem; color:var(--muted); text-align:center; margin-top:8px; line-height:1.4}
+  .leaflet-container{font-family:'Heebo',sans-serif}
+  .map-pin{
+    display:flex; align-items:center; justify-content:center; font-weight:900;
+    color:#fff; border-radius:50%; border:2.5px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.35);
+    font-size:.9rem;
+  }
+  .map-pin.stop{width:28px; height:28px; background:linear-gradient(135deg,#7c3aed,#ec4899)}
+  .map-pin.home{width:30px; height:30px; background:#14101f; font-size:1rem}
+  footer{text-align:center; color:var(--muted); font-size:.72rem; margin-top:24px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>🌲 הטיול שלנו ליער השחור 🌲</h1>
+    <div class="subtitle">גואקיל & זייפרט · 13–25 באוגוסט 2026</div>
+    <div class="countdown" id="countdown"></div>
+    <div class="progress-zone">
+      <div class="track-outer">
+        <div class="track">
+          <div class="track-fill" id="trackFill"></div>
+          <div class="dots" id="dots"></div>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--allegra)"></i> Allegra ציריך</span>
+        <span><i style="background:var(--sonneck)"></i> Sonneck דרום</span>
+        <span><i style="background:var(--lumi)"></i> Lumiflats צפון</span>
+      </div>
+    </div>
+  </div>
+  <div class="trees">🌲🌳🌲🌳🌲🌳🌲🌳🌲🌳🌲🌳🌲🌳🌲🌳🌲🌳🌲🌳🌲</div>
+</header>
+
+<div class="wrap">
+  <div class="day-nav">
+    <button id="prevBtn" aria-label="יום קודם">→</button>
+    <div class="day-title">
+      <div class="big" id="dayTitle"></div>
+      <div class="small" id="daySub"></div>
+    </div>
+    <button id="nextBtn" aria-label="יום הבא">←</button>
+  </div>
+
+  <div id="content"></div>
+
+  <footer>נבנה באהבה למשפחות גואקיל וזייפרט ✈️🌲</footer>
+</div>
+
+<div class="sheet-bg" id="sheetBg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <div id="sheetContent"></div>
+</div>
+
+<script>
+const HOTELS = {
+  allegra: { name:"Allegra Lodge", sub:"ציריך · צמוד לשדה התעופה", color:"var(--allegra)", hex:"#8b5cf6",
+    url:"https://allegra-lodge.ch/", waze:"https://waze.com/ul?q=Allegra%20Lodge%20Kloten&navigate=yes" },
+  sonneck: { name:"Landhotel Sonneck", sub:"פלדברג · דרום היער השחור", color:"var(--sonneck)", hex:"#16a34a",
+    url:"https://www.sonneck-feldberg.de/en", waze:"https://waze.com/ul?q=Landhotel%20Sonneck%20Feldberg&navigate=yes" },
+  lumi: { name:"LUMIFLATS", sub:"מאהלברג · צפון היער השחור", color:"var(--lumi)", hex:"#f59e0b",
+    url:"https://www.lumiflats.de/en/mahlberg", waze:"https://waze.com/ul?q=Lumiflats%20Mahlberg&navigate=yes" }
+};
+
+function waze(q){ return "https://waze.com/ul?q="+encodeURIComponent(q)+"&navigate=yes"; }
+
+/* ---------- map points + daily routes (aerial lines) ---------- */
+/* [lat, lng, English label, type]  type: "home"=hotel/airport, "stop"=attraction */
+const MAPPTS = {
+  zrhairport:  [47.4585, 8.5555, "Zürich Airport", "home"],
+  allegra:     [47.4343, 8.5635, "Allegra Lodge (Zürich)", "home"],
+  sonneck:     [47.8585, 8.0620, "Landhotel Sonneck (Feldberg)", "home"],
+  lumi:        [48.2850, 7.8220, "LUMIFLATS (Mahlberg)", "home"],
+  rhinefall:   [47.6775, 8.6150, "Rhine Falls (Schloss Laufen)", "stop"],
+  advpark:     [47.6790, 8.6100, "Adventure Park Rheinfall", "stop"],
+  feldberg:    [47.8700, 8.0080, "Feldberg cable car & Fundorena", "stop"],
+  antontrail:  [47.8720, 8.0180, "Anton the Rooster trail", "stop"],
+  ravenna:     [47.9180, 8.0980, "Ravenna Gorge", "stop"],
+  badeparadies:[47.9250, 8.1550, "Badeparadies Schwarzwald", "stop"],
+  tatzmania:   [47.8760, 8.3650, "Tatzmania Löffingen", "stop"],
+  titisee:     [47.9000, 8.1450, "Lake Titisee", "stop"],
+  hasenhorn:   [47.8260, 7.9550, "Hasenhorn Coaster (Todtnau)", "stop"],
+  todtnaufall: [47.8350, 7.9430, "Todtnau Waterfalls & bridge", "stop"],
+  todtnautown: [47.8280, 7.9470, "Todtnau town (barefoot trail)", "stop"],
+  mundenhof:   [47.9980, 7.7840, "Mundenhof animal park", "stop"],
+  freiburg:    [47.9950, 7.8520, "Freiburg old town", "stop"],
+  europapark:  [48.2660, 7.7220, "Europa-Park (Rust)", "stop"],
+  rulantica:   [48.2750, 7.7350, "Rulantica water world", "stop"],
+  gutachmuseum:[48.2450, 8.1830, "Vogtsbauernhof Open-Air Museum", "stop"],
+  gutachslide: [48.2430, 8.1870, "Gutach summer toboggan & senses trail", "stop"],
+  steinwasen:  [47.9120, 7.9650, "Steinwasen Park", "stop"],
+  schauinsland:[47.9130, 7.8970, "Schauinsland cable car", "stop"],
+};
+/* route per day number: ordered list of MAPPTS keys (hotel -> stops -> hotel) */
+const ROUTES = {
+  1:  ["zrhairport","allegra"],
+  2:  ["allegra","rhinefall","advpark","sonneck"],
+  3:  ["sonneck","feldberg","antontrail","sonneck"],
+  4:  ["sonneck","ravenna","badeparadies","sonneck"],
+  5:  ["sonneck","tatzmania","titisee","sonneck"],
+  6:  ["sonneck","hasenhorn","todtnaufall","todtnautown","sonneck"],
+  7:  ["sonneck","mundenhof","freiburg","lumi"],
+  8:  ["lumi","europapark","lumi"],
+  9:  ["lumi","gutachmuseum","gutachslide","lumi"],
+  10: ["lumi","steinwasen","schauinsland","lumi"],
+  11: ["lumi","rulantica","lumi"],
+  12: ["lumi","allegra"],
+  13: ["allegra","zrhairport"],
+};
+
+let dayMap = null;
+function initDayMap(d){
+  if(dayMap){ dayMap.remove(); dayMap = null; }
+  const el = document.getElementById("daymap");
+  const route = ROUTES[d.n];
+  if(!el || !route || !route.length || typeof L === "undefined") return;
+
+  const map = L.map(el, { scrollWheelZoom:false, attributionControl:false, zoomControl:true });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:17 }).addTo(map);
+
+  const latlngs = [];
+  let stopNo = 0;
+  route.forEach((key, idx)=>{
+    const p = MAPPTS[key];
+    if(!p) return;
+    const isHome = p[3] === "home";
+    // avoid double-numbering the same hotel that opens & closes a round trip
+    let label, cls;
+    if(isHome){ label = (key==="zrhairport") ? "✈️" : "🏠"; cls = "map-pin home"; }
+    else { stopNo++; label = String(stopNo); cls = "map-pin stop"; }
+    const icon = L.divIcon({ className:"", html:'<div class="'+cls+'">'+label+'</div>',
+      iconSize:[30,30], iconAnchor:[15,15] });
+    L.marker([p[0],p[1]], { icon }).addTo(map).bindPopup("<b>"+p[2]+"</b>");
+    latlngs.push([p[0],p[1]]);
+  });
+
+  if(latlngs.length > 1){
+    L.polyline(latlngs, { color:"#7c3aed", weight:3.5, opacity:.85, dashArray:"7,9" }).addTo(map);
+    map.fitBounds(latlngs, { padding:[38,38] });
+  } else if(latlngs.length === 1){
+    map.setView(latlngs[0], 13);
+  }
+  setTimeout(()=>{ try{ map.invalidateSize(); }catch(e){} }, 180);
+  dayMap = map;
+}
+
+const DAYS = [
+ { n:1, date:"13.08", dow:"חמישי", emoji:"✈️", area:"נחיתה בציריך", hotel:"allegra", newHotel:true,
+   wx:[47.45,8.56],
+   trivia:"שדה התעופה של ציריך נבחר שוב ושוב לאחד הטובים באירופה – ויש בו אפילו תצפית מטוסים על הגג! 🛫",
+   food:[
+     {name:"Sprüngli – שדה התעופה", desc:"שוקולד שוויצרי מפורסם ומקרוני Luxemburgerli צבעוניים 🍫", t:"בתוך השדה", wz:"Sprüngli Zurich Airport", url:"https://www.spruengli.ch/en/"},
+     {name:"פוד-קורט Airport Center", desc:"מבחר גדול לארוחה מהירה אחרי הנחיתה", t:"בתוך השדה"}
+   ],
+   flight:{from:"תל אביב",fromT:"18:15",to:"ציריך",toT:"21:35"},
+   areaNote:"טסים! לילה ראשון במלון צמוד לשדה",
+   attrs:[
+     { name:"Allegra Lodge – לינה ראשונה", emoji:"🛏️", domain:"allegra-lodge.ch", url:"https://allegra-lodge.ch/",
+       desc:"נוחתים ב-21:35, יוצאים מהשדה וישר למלון. הליכה קצרה / שאטל.", wz:"Allegra Lodge Kloten" }
+   ],
+   drives:["נחיתה ב-21:35 ויציאה מהשדה","המלון קרוב מאוד לשדה התעופה"],
+   tips:["לישון טוב 😴 – מחר מתחיל הכיף!"] },
+
+ { n:2, date:"14.08", dow:"שישי", emoji:"🌊", area:"מפלי הריין + פארק החבלים", hotel:"sonneck", newHotel:true,
+   wx:[47.68,8.61],
+   trivia:"מפלי הריין הם המפלים הגדולים באירופה – רוחבם 150 מטר, והם נוצרו לפני יותר מ-15,000 שנה, בתקופת הקרח! 🧊",
+   food:[
+     {name:"Schlössli Wörth", desc:"מסעדה על אי קטן ממש מול המפל – נוף מטורף מהשולחן", t:"0 דק' – ליד המפל", wz:"Schlössli Wörth Rheinfall", url:"https://schloessliwoerth.ch/"},
+     {name:"המסעדה בטירת לאופן", desc:"שירות עצמי נוח למשפחות בתוך מתחם הטירה", t:"0 דק' – בטירה", wz:"Schloss Laufen", url:"https://schlosslaufen.ch/en/"},
+     {name:"🍦 גלידה על גדת הריין", desc:"דוכני גלידה בטיילת נוהאוזן אחרי השייט", t:"5 דק'"}
+   ],
+   areaNote:"היום הראשון של ההרפתקה! מסיימים במלון החדש בדרום",
+   attrs:[
+     { name:"השכרת רכב", emoji:"🚗", desc:"אוספים את הרכב בשדה התעופה ויוצאים לדרך." },
+     { name:"מפלי הריין (Rheinfall)", emoji:"🌊", domain:"rheinfall.ch", url:"https://rheinfall.ch/en/",
+       desc:"המפל הגדול באירופה! חניה בטירת לאופן, מסלול כחול (88) רגלי, ואפשר שייט בסירות עד הסלע.", wz:"Schloss Laufen Rheinfall" },
+     { name:"Adventure Park Rheinfall", emoji:"🧗", domain:"adventurepark.ch", url:"https://www.adventurepark.ch/en/",
+       desc:"פארק חבלים עם אומגות מעל המפלים (מסלול 6!). חניה ב-P3. נסגר ב-18:00.", wz:"Adventure Park Rheinfall Neuhausen" }
+   ],
+   drives:["שדה תעופה ← מפלים: 45 דק'","מפלים ← מלון דרום (Sonneck): שעה ורבע"],
+   tips:["<b>בוויז:</b> להגדיר 'הימנעות מכבישי אגרה בשוויץ'! ⚠️","מסלול כחול 88 – רגלי","פארק החבלים <b>לא כלול</b> בכרטיס האדום (שוויץ)","להביא בגדי החלפה ונעליים סגורות"] },
+
+ { n:3, date:"15.08", dow:"שבת", emoji:"🚡", area:"מתחם פלדברג", hotel:"sonneck",
+   wx:[47.87,8.03],
+   trivia:"פלדברג הוא ההר הגבוה ביער השחור – 1,493 מטר! היער נקרא 'השחור' כי עצי האשוח צפופים כל כך שבתוכו חשוך גם ביום ☀️🌲",
+   food:[
+     {name:"מסעדת הפסגה של הרכבל", desc:"אוכל הררי פשוט עם נוף – בתחנה העליונה של הפלדברגבאן", t:"0 דק' – בפסגה", wz:"Feldbergbahn Bergstation", url:"https://www.feldbergbahn.de/"},
+     {name:"Raimartihof", desc:"פונדק כפרי בן 300 שנה ליד אגם פלדזה – שניצל ושפצלה אמיתיים", t:"10 דק' + הליכה קצרה", wz:"Raimartihof Feldberg", url:"https://www.raimartihof.de/"},
+     {name:"🍰 עוגת היער השחור", desc:"חובה לטעום את העוגה המקורית באחד מבתי הקפה במתחם", t:"במתחם"}
+   ],
+   areaNote:"רכבל + פאנדורה + שביל אנטוני + שביל הכדורים · הכול באותו מתחם!",
+   attrs:[
+     { name:"רכבל פלדברג", emoji:"🚡", domain:"feldbergbahn.de", url:"https://www.feldbergbahn.de/",
+       desc:"עולים ברכבל להר הגבוה ביער השחור – נוף מטורף!", wz:"Feldbergbahn" },
+     { name:"פאנדורה (Fundorena)", emoji:"🤸", domain:"fundorena.de", url:"https://www.fundorena.de/",
+       desc:"פארק ספורט ואקסטרים צמוד לרכבל – טיפוס, חבלים ומשחקייה.", wz:"Fundorena Feldberg" },
+     { name:"שביל אנטוני התרנגול", emoji:"🐓", domain:"hochschwarzwald.de", url:"https://www.hochschwarzwald.de/en",
+       desc:"שביל הליכה מעגלי עם פעילויות בדרך – מקסים במיוחד לגילאי 2–6.", wz:"Feldberg Wichtelpfad" },
+     { name:"שביל הכדורים", emoji:"⚽", desc:"עוד שביל חוויה כיפי באותו מתחם." }
+   ],
+   drives:["12 דק' נסיעה מהמלון","בין האטרקציות עוברים ברגל – הכול באותו מתחם"],
+   tips:["<b>כרטיס אדום:</b> רכבל חינם! 🎉 פאנדורה בהנחה","חניה בחניון המרכזי Feldberg Parkhaus 🅿️","שביל אנטוני מושלם לקטנטנים"] },
+
+ { n:4, date:"16.08", dow:"ראשון", emoji:"🏞️", area:"קניון רוונה + פארק המים", hotel:"sonneck",
+   wx:[47.90,8.15],
+   trivia:"מעל קניון רוונה עובר גשר רכבת ענק מ-1887 בגובה 37 מטר – והוא עדיין פעיל! בחורף מתקיים מתחתיו שוק חג מולד קסום 🚂",
+   food:[
+     {name:"Hofgut Sternen", desc:"ממש בכניסה לקניון רוונה! עוגת יער שחור מפורסמת, ויש גם סדנת נשיפת זכוכית לילדים", t:"0 דק' – בכניסה לקניון", wz:"Hofgut Sternen Breitnau", url:"https://www.hofgut-sternen.de/"},
+     {name:"מסעדות טיילת טיטיזה", desc:"מבחר משפחתי גדול על שפת האגם", t:"10 דק'", wz:"Titisee Seestrasse"},
+     {name:"🍦 גלידריה על הטיילת בטיטיזה", desc:"מושלם אחרי פארק המים", t:"10 דק'"}
+   ],
+   areaNote:"בוקר בטבע, אחר צהריים במים!",
+   attrs:[
+     { name:"קניון רוונה (Ravennaschlucht)", emoji:"🥾", domain:"hochschwarzwald.de", url:"https://www.hochschwarzwald.de/en",
+       desc:"מסלול הליכה קסום בקניון עם מפלים וגשרי עץ.", wz:"Ravennaschlucht" },
+     { name:"Badeparadies Schwarzwald", emoji:"💦", domain:"badeparadies-schwarzwald.de", url:"https://www.badeparadies-schwarzwald.de/",
+       desc:"פארק מים ענק עם מגלשות לגדולים ואזור רגוע לקטנים. מתאים גם לגשם!", wz:"Badeparadies Schwarzwald Titisee" }
+   ],
+   drives:["מלון ← קניון רוונה: 20 דק'","קניון ← באדפרדייס: 12 דק'"],
+   tips:["<b>כרטיס אדום:</b> באדפרדייס חינם (שעתיים לאזור גלקסי) – <b>חובה לשריין מקום מראש!</b> ⏰","קניון רוונה: חניה בתשלום 🅿️"] },
+
+ { n:5, date:"17.08", dow:"שני", emoji:"🦁", area:"פארק טאצמניה + אגם טיטיזה", hotel:"sonneck",
+   wx:[47.90,8.15],
+   trivia:"האגדה מספרת שאגם טיטיזה קיבל את שמו מהקיסר הרומי טיטוס שעבר כאן לפני 2,000 שנה! עומק האגם – 39 מטר 🌊",
+   food:[
+     {name:"מסעדות טיילת טיטיזה (Seestrasse)", desc:"פיצריות, מסעדות גרמניות ובתי קפה על שפת האגם", t:"0 דק' – על הטיילת", wz:"Titisee Seestrasse"},
+     {name:"🐟 פורל מעושן מקומי", desc:"המעדן של האזור – מוכרים על הטיילת ובחנויות", t:"על הטיילת"},
+     {name:"🍦 גלידריה על טיילת האגם", desc:"הפינוק המושלם אחרי השייט", t:"0 דק'"}
+   ],
+   areaNote:"חיות בבוקר, אגם אחר הצהריים",
+   attrs:[
+     { name:"פארק טאצמניה (Tatzmania)", emoji:"🦁", domain:"tatzmania.com", url:"https://www.tatzmania.com/",
+       desc:"גן חיות + מתקנים + ג'ימבורי. כיף גדול במיוחד לקטנים.", wz:"Tatzmania Löffingen" },
+     { name:"אגם טיטיזה (Titisee)", emoji:"⛵", domain:"hochschwarzwald.de", url:"https://www.hochschwarzwald.de/en",
+       desc:"שייט באגם, טיילת, מיני גולף, אופניים ורחצה. בקיץ יש פסטיבל!", wz:"Titisee" }
+   ],
+   drives:["מלון ← טאצמניה: 30 דק'","טאצמניה ← טיטיזה: 20 דק'"],
+   tips:["<b>כרטיס אדום:</b> טאצמניה חינם! שייט באגם טיטיזה חינם! 🎉"] },
+
+ { n:6, date:"18.08", dow:"שלישי", emoji:"🛝", area:"טודנאו: מגלשות + מפלים + גשר", hotel:"sonneck",
+   wx:[47.83,7.94],
+   trivia:"מגלשת ההסנהורן היא מהארוכות בגרמניה – 2.9 ק\"מ של ירידה! ומפלי טודנאו צונחים מגובה 97 מטר – מהגבוהים בגרמניה 💨",
+   food:[
+     {name:"בלה איטליה (Bella Italia)", desc:"ההמלצה מהתוכנית! פיצה, פסטה וגלידה טעימה בעיירה", t:"5 דק' מהמגלשות", wz:"Bella Italia Todtnau"},
+     {name:"Berggasthaus Hasenhorn", desc:"פונדק הרים בפסגת המגלשות – אוכל עם נוף לפני הירידה", t:"0 דק' – בפסגה", wz:"Berggasthaus Hasenhorn Todtnau", url:"https://www.hasenhorn-rodelbahn.de/berggasthaus-hasenhorn/"},
+     {name:"🍨 גלידה בבלה איטליה", desc:"הגלידה המומלצת של העיירה", t:"בעיירה"}
+   ],
+   areaNote:"יום אקסטרים! מגלשות הרים, גשר תלוי ורגליים יחפות",
+   attrs:[
+     { name:"מגלשות ההרים הסנהורן", emoji:"🛝", domain:"hasenhorn-rodelbahn.de", url:"https://www.hasenhorn-rodelbahn.de/",
+       desc:"2.9 ק\"מ של מגלשת הרים – הכי אקסטרים ביער השחור! מגיל 3 עם מבוגר, מגיל 8 לבד.", wz:"Hasenhorn Coaster Todtnau" },
+     { name:"מפלי טודנאו והגשר התלוי", emoji:"🌉", domain:"blackforestline.de", url:"https://blackforestline.de/",
+       desc:"מסלול טיול עם מפלים וגשר תלוי מרשים מעל העמק.", wz:"Todtnauer Wasserfall" },
+     { name:"שביל רגליים יחפות בטודנאו", emoji:"👣", desc:"הולכים יחפים בעיירה – חוויה מצחיקה ומגניבה." },
+     { name:"בלה איטליה 🍕", emoji:"🍨", desc:"המלצה בעיירה: גלידה טעימה ומסעדה איטלקית.", wz:"Bella Italia Todtnau" }
+   ],
+   drives:["מלון ← מגלשות: 20 דק'","מגלשות ← מפלים: 10 דק'","חזרה למלון: 25 דק'"],
+   tips:["הסנהורן: מגלשות אקסטרים (הנחה בכרטיס)","הגשר התלוי בבעלות פרטית – הנחה בכרטיס האדום","כרטיסים למגלשות רק בקופה במקום"] },
+
+ { n:7, date:"19.08", dow:"רביעי", emoji:"🚚", area:"יום מעבר: מונדנהוף + פרייבורג", hotel:"lumi", newHotel:true,
+   wx:[47.99,7.85],
+   trivia:"בפרייבורג זורמות תעלות מים קטנות (Bächle) ברחובות כבר 900 שנה! האגדה אומרת שמי שדורך בהן בטעות – יתחתן עם מישהו מפרייבורג 😄",
+   food:[
+     {name:"Markthalle Freiburg", desc:"שוק אוכל מקורה עם דוכנים מכל העולם – כל אחד בוחר מה שבא לו!", t:"במרכז העיר", wz:"Markthalle Freiburg", url:"https://markthalle-freiburg.de/"},
+     {name:"הנקניקייה הארוכה 'Lange Rote'", desc:"המאכל המפורסם של פרייבורג – נקניקייה ענקית בדוכני השוק ליד הקתדרלה", t:"בכיכר הקתדרלה", wz:"Münsterplatz Freiburg", url:"https://www.muenstermarkt.freiburg.de/"},
+     {name:"🍦 גלידה בכיכר", desc:"גלידריות איטלקיות סביב הכיכר – בזמן שהילדים משיטים סירות בתעלות", t:"בכיכר"}
+   ],
+   areaNote:"עוברים למלון החדש בצפון! יום רגוע לקראת פארק אירופה",
+   attrs:[
+     { name:"פארק החיות מונדנהוף", emoji:"🐾", domain:"mundenhof.de", url:"https://www.mundenhof.de/",
+       desc:"פארק חיות פתוח ורגוע – חינם! משלמים רק על חניה.", wz:"Mundenhof Freiburg" },
+     { name:"העיר פרייבורג", emoji:"⛲", domain:"visit.freiburg.de", url:"https://visit.freiburg.de/en",
+       desc:"סיבוב בכיכר, להשיט סירות קטנות בתעלות (Bächle) ולאכול גלידה!", wz:"Freiburg Münsterplatz" }
+   ],
+   drives:["מלון ← מונדנהוף: 40 דק'","מונדנהוף ← פרייבורג: 25 דק'","פרייבורג ← מלון חדש (Lumiflats): 40 דק'"],
+   tips:["מונדנהוף: תשלום סמלי על חניה בלבד","בפרייבורג: סירות בתעלות + גלידה 🍦","יום רגוע בכוונה – מחר פארק אירופה! 🎢"] },
+
+ { n:8, date:"20.08", dow:"חמישי", emoji:"🎢", area:"פארק אירופה!", hotel:"lumi",
+   wx:[48.27,7.72],
+   trivia:"פארק אירופה הוא פארק השעשועים הפופולרי ביותר בגרמניה – יותר מ-6 מיליון מבקרים בשנה, עם 'מדינות' שלמות בתוכו! 🌍",
+   food:[
+     {name:"FoodLoop", desc:"המסעדה הכי מגניבה לילדים – האוכל מגיע לשולחן ברכבת הרים קטנה! 🎢", t:"בתוך הפארק", wz:"FoodLoop Europa-Park Rust", url:"https://www.europapark.de/en"},
+     {name:"מסעדות לפי 'מדינות'", desc:"פסטה באיטליה, טאפאס בספרד, קרפ בצרפת – כל אזור והאוכל שלו", t:"בתוך הפארק"},
+     {name:"🧇 וופל בלגי / צ'ורוס", desc:"בדוכנים ברחבי הפארק – הפסקת סוכר בין רכבות הרים", t:"בתוך הפארק"}
+   ],
+   areaNote:"היום הגדול! אחד מפארקי השעשועים הכי טובים בעולם",
+   attrs:[
+     { name:"Europa-Park", emoji:"🎢", domain:"europapark.de", url:"https://www.europapark.de/en",
+       desc:"פארק ענק המחולק ל'מדינות' – רכבות הרים, מופעים ואזורי ילדים.", wz:"Europa-Park Rust" }
+   ],
+   drives:["10 דק' נסיעה בלבד מהדירה!"],
+   tips:["<b>חובה להזמין כרטיסים מראש!</b> ⏰","לא כלול בכרטיסים האזוריים","לפצל כוחות: מבוגר אחד עם בן ה-2 באזורים הרגועים (איסלנד/אירלנד)","להגיע מוקדם לפתיחה"] },
+
+ { n:9, date:"21.08", dow:"שישי", emoji:"🏡", area:"גוטאך: מוזיאון + מגלשות + חושים", hotel:"lumi",
+   wx:[48.28,8.20],
+   trivia:"הכובע המפורסם של היער השחור – ה-Bollenhut עם 14 פונפונים אדומים – נולד ממש כאן באזור גוטאך! הוא שוקל עד 2 ק\"ג 🎩🔴",
+   food:[
+     {name:"מסעדת המוזיאון הפתוח", desc:"אוכל כפרי מסורתי של היער השחור בתוך המתחם", t:"0 דק' – במוזיאון", wz:"Vogtsbauernhof Gutach", url:"https://www.vogtsbauernhof.de/en"},
+     {name:"🥓 שינקן היער השחור", desc:"הנקניק המעושן המפורסם – טעימות בחנות המוזיאון", t:"במוזיאון"},
+     {name:"🍰 עוגת יער שחור בקפה המוזיאון", desc:"במקום שבו היא באמת נולדה!", t:"במוזיאון"}
+   ],
+   areaNote:"כל האטרקציות באותה עיירה!",
+   attrs:[
+     { name:"המוזיאון הפתוח של היער השחור", emoji:"🏡", domain:"vogtsbauernhof.de", url:"https://www.vogtsbauernhof.de/en",
+       desc:"כפר של בתים מסורתיים אמיתיים – רואים איך חיו פעם ביער השחור.", wz:"Vogtsbauernhof Gutach" },
+     { name:"מגלשות הרים גוטאך", emoji:"🛝", domain:"sommerrodelbahn-gutach.de", url:"https://www.sommerrodelbahn-gutach.de/",
+       desc:"מגלשות הרים צמודות למוזיאון – תשלום לפי סיבוב.", wz:"Sommerrodelbahn Gutach" },
+     { name:"שביל החושים", emoji:"👃", domain:"park-mit-allen-sinnen.de", url:"https://www.park-mit-allen-sinnen.de/",
+       desc:"2 ק\"מ של תחנות לכל החושים, הליכה יחפה. צמוד גם לחוות סוסים 🐴", wz:"Park mit allen Sinnen Gutach" }
+   ],
+   drives:["מלון ← גוטאך: 50 דק'","בין האטרקציות בגוטאך: דקות בודדות"],
+   tips:["<b>כרטיס שחור:</b> המוזיאון הפתוח חינם! 🎉","מגלשות גוטאך: תשלום לפי סיבוב","שביל החושים: חוויה לכל המשפחה"] },
+
+ { n:10, date:"22.08", dow:"שבת", emoji:"🐻", area:"פארק שטיינוואסן (+ שאואינסלנד)", hotel:"lumi",
+   wx:[47.93,7.94],
+   trivia:"גשר החבלים בשטיינוואסן הוא מהארוכים בעולם – 218 מטר! והולכים עליו בגובה 30 מטר מעל הפארק 🌉",
+   food:[
+     {name:"מסעדת הפארק בשטיינוואסן", desc:"מסעדה משפחתית בתוך הפארק – לא צריך לצאת", t:"0 דק' – בפארק", wz:"Steinwasen-Park", url:"https://www.steinwasen-park.de/"},
+     {name:"Die Bergstation – שאואינסלנד", desc:"מסעדה בפסגת הרכבל עם נוף עד האלפים ביום בהיר", t:"בפסגת הרכבל", wz:"Schauinslandbahn Bergstation", url:"https://www.schauinslandbahn.de/en/"},
+     {name:"🍰 קפה ועוגה בפסגה", desc:"עוגות שוואביות בבית הקפה של תחנת הרכבל", t:"בפסגה"}
+   ],
+   areaNote:"פארק אקשן בתוך עמק יפהפה",
+   attrs:[
+     { name:"פארק שטיינוואסן", emoji:"🐻", domain:"steinwasen-park.de", url:"https://www.steinwasen-park.de/",
+       desc:"גשר חבלים ענק (218 מ'!), 2 מגלשות הרים, River Splash, רכבת הרים מקורה, קולנוע 4D ואזור חיות עם דובים ואיילים.", wz:"Steinwasen-Park" },
+     { name:"הר שאואינסלנד (אופציה)", emoji:"🚠", domain:"schauinslandbahn.de", url:"https://www.schauinslandbahn.de/en/",
+       desc:"הרכבל הארוך ביותר בגרמניה! רק אם נשאר כוח לילדים 😉", wz:"Schauinslandbahn" }
+   ],
+   drives:["מלון ← שטיינוואסן: 50 דק'","שטיינוואסן ← שאואינסלנד: 25 דק'"],
+   tips:["<b>כרטיס שחור:</b> שטיינוואסן חינם! שאואינסלנד חינם! 🎉","שבת פחות עמוסה כאן מאשר ברולנטיקה","שאואינסלנד אופציונלי בלבד – לפי כוח הילדים"] },
+
+ { n:11, date:"23.08", dow:"ראשון", emoji:"💦", area:"פארק המים רולנטיקה", hotel:"lumi",
+   wx:[48.27,7.72],
+   trivia:"רולנטיקה בנוי כמו אי סקנדינבי אגדי, וכל השמות בו בשפה 'נורדית' מומצאת! יש בו 17 מגלשות ונהר עצל באורך 450 מטר 🏝️",
+   food:[
+     {name:"מסעדות בתוך רולנטיקה", desc:"מסעדות נורדיות בתוך הפארק – אפשר לאכול בבגד ים 😄", t:"0 דק' – בפארק", wz:"Rulantica Rust", url:"https://www.rulantica.de/en"},
+     {name:"מסעדות מאהלברג ואטנהיים", desc:"פיצריות ומסעדות כפריות ליד הדירה לארוחת ערב", t:"10 דק' מהדירה", wz:"Mahlberg"},
+     {name:"🧇 וופל בפארק", desc:"עמדות מתוקים בתוך רולנטיקה", t:"בפארק"}
+   ],
+   areaNote:"פארק מים מקורה ענק בסגנון סקנדינבי!",
+   attrs:[
+     { name:"Rulantica", emoji:"💦", domain:"rulantica.de", url:"https://www.rulantica.de/en",
+       desc:"פארק המים של פארק אירופה – מגלשות, נהר עצל ומתחם Trøll Valley מיוחד לקטנטנים.", wz:"Rulantica Rust" }
+   ],
+   drives:["10 דק' נסיעה בלבד מהדירה!"],
+   tips:["<b>חובה להזמין מראש!</b> ⏰","להגיע ב-08:45 לפתיחה","יום ראשון עדיף משבת (חילופי תיירים)","מתחם Trøll Valley מעולה לבן השנתיים 👶"] },
+
+ { n:12, date:"24.08", dow:"שני", emoji:"🧳", area:"יום מעבר חזרה לשוויץ", hotel:"allegra", newHotel:true,
+   wx:[47.45,8.56],
+   trivia:"שוויץ מייצרת בערך 200,000 טון שוקולד בשנה – והשוויצרים אוכלים הכי הרבה שוקולד לאדם בעולם! 🍫",
+   food:[
+     {name:"ארוחת סיום בציריך", desc:"אם יש כוח – קפיצה לעיר העתיקה של ציריך לארוחת פרידה", t:"15 דק' מהמלון", wz:"Zurich Old Town"},
+     {name:"🍫 שוקולד שוויצרי", desc:"Läderach או Sprüngli – מתנות טעימות הביתה", t:"בעיר / בשדה"}
+   ],
+   areaNote:"נוסעים בנחת חזרה לציריך",
+   attrs:[
+     { name:"נסיעה לציריך + החזרת רכב", emoji:"🚗", desc:"נסיעה רגועה, התארגנות, אריזות והחזרת הרכב בנחת – בלי לחץ של טיסה.", wz:"Zurich Airport Car Rental Return" },
+     { name:"Allegra Lodge – לילה אחרון", emoji:"🛏️", domain:"allegra-lodge.ch", url:"https://allegra-lodge.ch/",
+       desc:"ישנים שוב ליד שדה התעופה לקראת הטיסה מחר בבוקר.", wz:"Allegra Lodge Kloten" }
+   ],
+   drives:["מהצפון ← ציריך: כשעתיים וחצי"],
+   tips:["להחזיר את הרכב בנחת","לארוז הכול היום – מחר קמים לטיסה"] },
+
+ { n:13, date:"25.08", dow:"שלישי", emoji:"🏠", area:"טיסה חזרה הביתה", hotel:null,
+   wx:[47.45,8.56],
+   trivia:"טסנו בערך 3,000 ק\"מ הביתה! ובינתיים ביקרנו ב-3 מדינות: שוויץ, גרמניה – וכמעט נגענו בצרפת 🗺️",
+   food:[
+     {name:"ארוחת בוקר בשדה", desc:"קרואסון ושוקו אחרון לפני הטיסה", t:"בשדה התעופה"},
+     {name:"🍫 שוקולד אחרון בדיוטי פרי", desc:"הזדמנות אחרונה למלא את המזוודה", t:"בשדה"}
+   ],
+   flight:{from:"ציריך",fromT:"11:50",to:"תל אביב",toT:"17:00"},
+   areaNote:"חוזרים הביתה מרוצים ועייפים! 🥰",
+   attrs:[
+     { name:"נסיעה קצרה לשדה", emoji:"✈️", desc:"בוקר רגוע, הגעה קצרה לשדה והביתה!" }
+   ],
+   drives:["המלון צמוד לשדה – הגעה קצרה בבוקר"],
+   tips:["טיסת בוקר ב-11:50","איזה טיול היה! 🌲💚"] }
+];
+
+const TRIP_START = new Date(2026,7,13);
+const TRIP_END   = new Date(2026,7,25);
+const DONE_KEY = "bf_done_days";
+let selected = 0;
+
+function todayIndex(){
+  const now = new Date(); const t = new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const diff = Math.round((t - TRIP_START)/864e5);
+  return diff; // may be negative or >12
+}
+function getDone(){ try{return JSON.parse(localStorage.getItem(DONE_KEY)||"[]")}catch(e){return[]} }
+function setDone(a){ try{localStorage.setItem(DONE_KEY,JSON.stringify(a))}catch(e){} }
+
+/* ---------- countdown ---------- */
+function renderCountdown(){
+  const el = document.getElementById("countdown");
+  const ti = todayIndex();
+  if(ti < 0) el.textContent = "🎒 עוד " + (-ti) + " ימים לטיול!";
+  else if(ti <= 12) el.textContent = "🎉 יום " + (ti+1) + " מתוך 13 בטיול!";
+  else el.textContent = "💚 איזה טיול היה!";
+}
+
+/* ---------- progress bar ---------- */
+function houseSvg(hex){
+  return '<svg viewBox="0 0 24 24" fill="'+hex+'" stroke="#fff" stroke-width="1.2"><path d="M3 11 L12 3 L21 11 V21 H14 V15 H10 V21 H3 Z"/></svg>';
+}
+function renderDots(){
+  const wrap = document.getElementById("dots"); wrap.innerHTML = "";
+  const ti = todayIndex(); const done = getDone();
+  DAYS.forEach((d,i)=>{
+    const el = document.createElement("div");
+    el.className = "dot" + (i<=ti&&ti>=0?" past":"") + (i===selected?" selected":"") + (done.includes(d.n)?" done":"");
+    el.textContent = d.n;
+    el.title = d.date + " · יום " + d.dow;
+    el.onclick = ()=>{ selected=i; renderAll(); };
+    if(d.newHotel && d.hotel){
+      const h = document.createElement("span");
+      h.className = "house"; h.innerHTML = houseSvg(HOTELS[d.hotel].hex);
+      el.appendChild(h);
+    }
+    wrap.appendChild(el);
+  });
+  const ti2 = Math.max(0, Math.min(13, todayIndex()+1));
+  document.getElementById("trackFill").style.width = (ti2/13*100)+"%";
+}
+
+/* ---------- day content ---------- */
+function attrCard(a){
+  const iconHtml = a.domain
+    ? '<div class="icon"><img src="https://www.google.com/s2/favicons?domain='+a.domain+'&sz=64" alt="" onerror="this.replaceWith(document.createTextNode(\''+a.emoji+'\'))"></div>'
+    : '<div class="icon">'+a.emoji+'</div>';
+  let links = "";
+  if(a.url) links += '<a class="pill site" href="'+a.url+'" target="_blank" rel="noopener">🌐 לאתר האטרקציה</a>';
+  if(a.wz)  links += '<a class="pill waze" href="'+waze(a.wz)+'" target="_blank" rel="noopener">🚘 Waze</a>';
+  if(a.url && a.wz) links += '<a class="pill hours" href="https://www.google.com/search?q='+encodeURIComponent(a.wz+" opening hours")+'" target="_blank" rel="noopener">🕐 שעות פעילות</a>';
+  return '<div class="attr">'+iconHtml+
+    '<div class="body"><h3>'+a.emoji+' '+a.name+'</h3><p>'+(a.desc||"")+'</p>'+
+    (links?'<div class="links">'+links+'</div>':"")+'</div></div>';
+}
+
+function renderDay(){
+  const d = DAYS[selected]; const ti = todayIndex(); const done = getDone();
+  document.getElementById("dayTitle").innerHTML =
+    "יום "+d.n+" · "+d.date + (selected===ti?'<span class="today-badge">היום!</span>':"");
+  document.getElementById("daySub").textContent = "יום "+d.dow+" · "+d.date+".2026";
+  document.getElementById("prevBtn").disabled = selected===0;
+  document.getElementById("nextBtn").disabled = selected===DAYS.length-1;
+
+  let html = "";
+
+  html += '<div class="hero"><div class="emoji">'+d.emoji+'</div><h2>'+d.area+'</h2>'+
+    '<div class="area-note">'+(d.areaNote||"")+'</div>'+
+    '<div class="wx" id="wx">⏳ טוען תחזית...</div><br>'+
+    '<button class="visited-btn'+(done.includes(d.n)?" on":"")+'" onclick="toggleDone('+d.n+')">'+
+    (done.includes(d.n)?"⭐ היינו! איזה כיף היה":"סיימנו את היום? לחצו! ⭐")+'</button></div>';
+
+  if(d.flight){
+    html += '<div class="flight"><div class="f-part"><div class="f-l">המראה · '+d.flight.from+'</div><div class="f-t">'+d.flight.fromT+'</div></div>'+
+      '<div class="f-mid">✈️</div>'+
+      '<div class="f-part"><div class="f-l">נחיתה · '+d.flight.to+'</div><div class="f-t">'+d.flight.toT+'</div></div></div>';
+  }
+
+  html += '<div class="actions">'+
+    '<button class="action-btn btn-drive" onclick="openSheet(\'drive\')"><span class="a-emoji">🚗</span>פירוט נסיעות</button>'+
+    '<button class="action-btn btn-food" onclick="openSheet(\'food\')"><span class="a-emoji">🍽️</span>מה אוכלים?</button>'+
+    '<button class="action-btn btn-tips" onclick="openSheet(\'tips\')"><span class="a-emoji">🎟️</span>כרטיסים ודגשים</button></div>';
+
+  html += '<button class="btn-journal" onclick="openSheet(\'journal\')">📖 יומן מסע – הרגעים שלנו</button>';
+
+  if(d.trivia){
+    html += '<div class="trivia"><div class="t-title">🤓 הידעתם? טריוויה של היום</div>'+d.trivia+'</div>';
+  }
+
+  html += '<div class="section-label">🎡 מה עושים היום?</div>';
+  d.attrs.forEach(a=>{ html += attrCard(a); });
+
+  if(d.n===8){
+    html += '<a class="btn-itamar" href="https://parkeropa.netlify.app/" target="_blank" rel="noopener">🎢 המדריך של איתמר</a>';
+  }
+
+  if(ROUTES[d.n]){
+    html += '<div class="section-label">🗺️ המסלול של היום על המפה</div>'+
+      '<div class="map-card"><div class="daymap" id="daymap"></div>'+
+      '<div class="map-hint">🏠 = מלון · ✈️ = שדה תעופה · המספרים לפי סדר המסלול · הקו המקווקו הוא קו אווירי · לחצו על נקודה לשם המקום</div></div>';
+  }
+
+  if(d.hotel){
+    const h = HOTELS[d.hotel];
+    html += '<div class="section-label">🏠 איפה ישנים הלילה?'+(d.newHotel?' <span style="font-size:.7rem;background:#ffe082;border-radius:999px;padding:1px 8px">מלון חדש!</span>':"")+'</div>'+
+      '<a class="hotel" style="background:'+h.hex+'" href="'+h.waze+'" target="_blank" rel="noopener">'+
+      '<div class="h-icon">🏠</div><div><div class="h-name">'+h.name+'</div><div class="h-sub">'+h.sub+'</div></div>'+
+      '<div class="h-go">🚘 נווטו<br>ב-Waze</div></a>';
+  }
+
+  document.getElementById("content").innerHTML = html;
+  loadWeather(d);
+  initDayMap(d);
+}
+
+/* ---------- weather (Open-Meteo, cached for offline) ---------- */
+const WX_ICONS = {0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌦️",61:"🌧️",63:"🌧️",65:"🌧️",66:"🌧️",67:"🌧️",71:"🌨️",73:"🌨️",75:"🌨️",77:"🌨️",80:"🌦️",81:"🌧️",82:"⛈️",85:"🌨️",86:"🌨️",95:"⛈️",96:"⛈️",99:"⛈️"};
+function isoDate(d){ const p=d.date.split("."); return "2026-"+p[1]+"-"+p[0]; }
+function showWx(v){
+  const el=document.getElementById("wx"); if(!el) return;
+  el.innerHTML=(WX_ICONS[v.code]||"🌡️")+" "+v.max+"° / "+v.min+"°"+(v.rain!=null?" · ☔ "+v.rain+"%":"");
+}
+function wxFallback(){
+  const el=document.getElementById("wx"); if(!el) return;
+  el.innerHTML="🗓️ תחזית מדויקת תופיע כאן כ-16 יום לפני · אוגוסט טיפוסי: 14°–25°";
+}
+async function loadWeather(d){
+  if(!d.wx){ const el=document.getElementById("wx"); if(el) el.remove(); return; }
+  const key="bf_wx_"+d.n;
+  let cache=null; try{cache=JSON.parse(localStorage.getItem(key))}catch(e){}
+  if(cache) showWx(cache.v);                       // offline: show cached forecast
+  if(cache && Date.now()-cache.t < 6*3600e3) return; // fresh enough
+  try{
+    const iso=isoDate(d);
+    const r=await fetch("https://api.open-meteo.com/v1/forecast?latitude="+d.wx[0]+"&longitude="+d.wx[1]+
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FBerlin&start_date="+iso+"&end_date="+iso);
+    const j=await r.json();
+    if(j.daily && j.daily.time && j.daily.time.length){
+      const v={code:j.daily.weather_code[0], max:Math.round(j.daily.temperature_2m_max[0]),
+               min:Math.round(j.daily.temperature_2m_min[0]), rain:j.daily.precipitation_probability_max[0]};
+      try{localStorage.setItem(key,JSON.stringify({t:Date.now(),v:v}))}catch(e){}
+      if(DAYS[selected].n===d.n) showWx(v);
+    } else if(!cache) wxFallback();
+  }catch(e){ if(!cache) wxFallback(); }
+}
+
+function renderAll(){ renderCountdown(); renderDots(); renderDay(); window.scrollTo({top:0,behavior:"smooth"}); }
+
+/* ---------- sheets ---------- */
+function openSheet(kind){
+  const d = DAYS[selected]; let html = "";
+  if(kind==="drive"){
+    html = '<h3>🚗 פירוט נסיעות – יום '+d.n+'</h3><ul>'+
+      d.drives.map(x=>"<li>🕐 "+x+"</li>").join("")+'</ul>';
+  } else if(kind==="food"){
+    html = '<h3>🍽️ מה אוכלים היום? (עד 15 דק\' מהאטרקציות)</h3><ul>'+
+      (d.food||[]).map(f=>{
+        let pills = "";
+        if(f.url) pills += '<a class="pill site" href="'+f.url+'" target="_blank" rel="noopener">🌐 לאתר</a> ';
+        if(f.wz)  pills += '<a class="pill waze" href="'+waze(f.wz)+'" target="_blank" rel="noopener">🚘 Waze</a> ';
+        if(f.wz)  pills += '<a class="pill hours" href="https://www.google.com/search?q='+encodeURIComponent(f.wz+" opening hours")+'" target="_blank" rel="noopener">🕐 שעות פעילות</a>';
+        return '<li><b>'+f.name+'</b>'+(f.t?' <span class="rest-time">· '+f.t+'</span>':"")+
+          '<br>'+f.desc+(pills?'<br>'+pills:"")+'</li>';
+      }).join("")+'</ul>';
+  } else if(kind==="journal"){
+    html = journalHtml(d);
+  } else {
+    html = '<h3>🎟️ כרטיסי הנחה ודגשים – יום '+d.n+'</h3><ul>'+
+      (d.tips.length?d.tips.map(x=>"<li>💡 "+x+"</li>").join(""):"<li>אין דגשים מיוחדים היום 🙂</li>")+'</ul>';
+  }
+  document.getElementById("sheetContent").innerHTML = html;
+  document.getElementById("sheetBg").classList.add("open");
+  document.getElementById("sheet").classList.add("open");
+  if(kind==="journal") fillJournalPhotos();
+}
+function closeSheet(){
+  document.getElementById("sheetBg").classList.remove("open");
+  document.getElementById("sheet").classList.remove("open");
+  if(editing){ editing.added.forEach(p=>URL.revokeObjectURL(p.url)); editing = null; }
+}
+
+/* ---------- done + confetti ---------- */
+function toggleDone(n){
+  let done = getDone();
+  if(done.includes(n)) done = done.filter(x=>x!==n);
+  else { done.push(n); confetti(); }
+  setDone(done); renderAll();
+}
+function confetti(){
+  const em = ["🎉","⭐","🌲","💚","🎊","✨"];
+  for(let i=0;i<26;i++){
+    const s = document.createElement("span");
+    s.className="confetti"; s.textContent = em[i%em.length];
+    s.style.left = Math.random()*100+"vw";
+    s.style.animationDelay = (Math.random()*0.5)+"s";
+    s.style.fontSize = (1+Math.random())+"rem";
+    document.body.appendChild(s);
+    setTimeout(()=>s.remove(),3000);
+  }
+}
+
+/* ---------- travel journal (text + photos, stored on this device) ---------- */
+const J_KEY = "bf_journal_entries";
+let pendingPhotos = []; // {id, blob, url}
+let pendingAttr = "";   // attraction the new entry belongs to
+let editing = null;     // {id, attr, textDraft, removed:[], added:[]}
+
+function jSetAttr(name){ pendingAttr = (pendingAttr===name ? "" : name); refreshJournal(); }
+
+/* ---- edit an existing entry ---- */
+function jEdit(id){
+  const e = jGetEntries().find(x=>x.id===id); if(!e) return;
+  if(editing) jEditCancel();
+  editing = {id:id, attr:e.attr||"", textDraft:e.text||"", removed:[], added:[]};
+  refreshJournal();
+}
+function jEditAttr(n){ if(!editing) return; editing.attr = (editing.attr===n?"":n); refreshJournal(); }
+function jEditTogglePhoto(pid){
+  if(!editing) return;
+  const i = editing.removed.indexOf(pid);
+  if(i>=0) editing.removed.splice(i,1); else editing.removed.push(pid);
+  refreshJournal();
+}
+async function jEditAddPhotos(input){
+  if(!editing) return;
+  const eta = document.getElementById("jEditText"); if(eta) editing.textDraft = eta.value;
+  for(const f of input.files){
+    const blob = await compressImage(f);
+    editing.added.push({id:"p"+Date.now()+"_"+Math.random().toString(36).slice(2,7), blob:blob, url:URL.createObjectURL(blob)});
+  }
+  input.value = "";
+  refreshJournal();
+}
+async function jEditSave(){
+  if(!editing) return;
+  const eta = document.getElementById("jEditText");
+  const text = (eta ? eta.value : editing.textDraft || "").trim();
+  const entries = jGetEntries();
+  const e = entries.find(x=>x.id===editing.id);
+  if(!e){ editing = null; refreshJournal(); return; }
+  const keep = (e.photos||[]).filter(p=>!editing.removed.includes(p));
+  if(!text && !keep.length && !editing.added.length){ alert("הרגע לא יכול להישאר ריק – אפשר למחוק אותו במקום 🙂"); return; }
+  for(const p of editing.added) await jdbPut(p.id, p.blob);
+  for(const pid of editing.removed) await jdbDel(pid);
+  e.text = text; e.attr = editing.attr;
+  e.photos = keep.concat(editing.added.map(p=>p.id));
+  jSetEntries(entries);
+  editing.added.forEach(p=>URL.revokeObjectURL(p.url));
+  editing = null;
+  refreshJournal();
+}
+function jEditCancel(){
+  if(editing) editing.added.forEach(p=>URL.revokeObjectURL(p.url));
+  editing = null;
+  refreshJournal();
+}
+
+function jGetEntries(){ try{return JSON.parse(localStorage.getItem(J_KEY)||"[]")}catch(e){return[]} }
+function jSetEntries(a){ try{localStorage.setItem(J_KEY,JSON.stringify(a))}catch(e){alert("אין מקום לשמירה 😕")} }
+
+function jdb(){
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open("bf_journal_db",1);
+    r.onupgradeneeded = ()=>r.result.createObjectStore("photos");
+    r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error);
+  });
+}
+async function jdbPut(k,v){ const db=await jdb(); return new Promise((res,rej)=>{
+  const t=db.transaction("photos","readwrite"); t.objectStore("photos").put(v,k);
+  t.oncomplete=res; t.onerror=()=>rej(t.error); });}
+async function jdbGet(k){ const db=await jdb(); return new Promise((res,rej)=>{
+  const q=db.transaction("photos").objectStore("photos").get(k);
+  q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); });}
+async function jdbDel(k){ const db=await jdb(); return new Promise((res,rej)=>{
+  const t=db.transaction("photos","readwrite"); t.objectStore("photos").delete(k);
+  t.oncomplete=res; t.onerror=()=>rej(t.error); });}
+
+function compressImage(file){
+  return new Promise((res)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const max = 1400;
+      let w=img.width, h=img.height;
+      if(Math.max(w,h)>max){ const s=max/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
+      const c = document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      c.toBlob(b=>res(b||file), "image/jpeg", .82);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = ()=>res(file);
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+async function jAddPhotos(input){
+  for(const f of input.files){
+    const blob = await compressImage(f);
+    const id = "p"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
+    pendingPhotos.push({id, blob, url:URL.createObjectURL(blob)});
+  }
+  input.value = "";
+  refreshJournal();
+}
+
+async function jSave(){
+  const ta = document.getElementById("jText");
+  const text = (ta?ta.value:"").trim();
+  if(!text && !pendingPhotos.length){ alert("כתבו משהו או הוסיפו תמונה 🙂"); return; }
+  for(const p of pendingPhotos) await jdbPut(p.id, p.blob);
+  const entries = jGetEntries();
+  entries.unshift({ id:"e"+Date.now(), day:DAYS[selected].n, ts:Date.now(),
+    text:text, attr:pendingAttr, photos:pendingPhotos.map(p=>p.id) });
+  jSetEntries(entries);
+  pendingPhotos.forEach(p=>URL.revokeObjectURL(p.url));
+  pendingPhotos = [];
+  pendingAttr = "";
+  confetti();
+  refreshJournal(true);
+}
+
+async function jDelete(id){
+  if(!confirm("למחוק את הרשומה?")) return;
+  const entries = jGetEntries();
+  const e = entries.find(x=>x.id===id);
+  if(e) for(const pid of (e.photos||[])) await jdbDel(pid);
+  jSetEntries(entries.filter(x=>x.id!==id));
+  refreshJournal();
+}
+
+async function jShare(id){
+  const e = jGetEntries().find(x=>x.id===id); if(!e) return;
+  const d = DAYS.find(x=>x.n===e.day);
+  const text = "📖 יומן המסע – יום "+e.day+" ("+(d?d.area:"")+")"+
+    (e.attr?" · "+e.attr:"")+":\n"+(e.text||"");
+  try{
+    const files = [];
+    for(const pid of (e.photos||[])){
+      const b = await jdbGet(pid);
+      if(b) files.push(new File([b], pid+".jpg", {type:"image/jpeg"}));
+    }
+    if(files.length && navigator.canShare && navigator.canShare({files})){
+      await navigator.share({text, files}); return;
+    }
+    if(navigator.share){ await navigator.share({text}); return; }
+    window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank");
+  }catch(err){ /* user cancelled */ }
+}
+
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function journalHtml(d){
+  const entries = jGetEntries();
+  const mine = entries.filter(e=>e.day===d.n);
+  const others = entries.filter(e=>e.day!==d.n);
+  let html = '<h3>📖 יומן מסע</h3>'+
+    '<div class="j-intro">כאן שומרים את הרגעים של הטיול: כותבים משהו שנהנינו ממנו, מוסיפים תמונות מהמצלמה או מהגלריה — והכול נשמר בטלפון הזה, גם בלי אינטרנט. אפשר לשתף כל רגע לוואטסאפ הקבוצתי של שתי המשפחות 💜<br><small>שימו לב: היומן נשמר במכשיר הזה בלבד.</small></div>';
+  html += '<button class="j-export" id="jExportBtn" onclick="jExport()">📕 צור סיכום טיול לשיתוף – כל הימים, הרגעים והתמונות</button>';
+  html += '<div class="j-form">'+
+    '<textarea id="jText" placeholder="מה היה כיף היום? (יום '+d.n+' – '+esc(d.area)+')"></textarea>'+
+    '<div class="j-chips"><span class="j-chip-label">לאיזו אטרקציה שייך הרגע? (לא חובה)</span>'+
+      d.attrs.map(a=>'<button class="j-chip'+(pendingAttr===a.name?" on":"")+'" onclick="jSetAttr(\''+esc(a.name).replace(/'/g,"\\'")+'\')">'+a.emoji+' '+esc(a.name)+'</button>').join("")+
+    '</div>'+
+    '<div class="j-photo-row">'+pendingPhotos.map(p=>'<img class="j-thumb" src="'+p.url+'">').join("")+'</div>'+
+    '<div class="j-btns">'+
+      '<button class="j-btn cam" onclick="document.getElementById(\'jCam\').click()">📷 צילום</button>'+
+      '<button class="j-btn cam" onclick="document.getElementById(\'jGal\').click()">🖼️ מהגלריה</button>'+
+      '<button class="j-btn save" onclick="jSave()">💾 שמור רגע</button>'+
+    '</div>'+
+    '<input type="file" id="jCam" accept="image/*" capture="environment" style="display:none" onchange="jAddPhotos(this)">'+
+    '<input type="file" id="jGal" accept="image/*" multiple style="display:none" onchange="jAddPhotos(this)">'+
+  '</div>';
+  const entryHtml = e=>{
+    if(editing && editing.id===e.id){
+      const dd = DAYS.find(x=>x.n===e.day);
+      return '<div class="j-entry editing">'+
+        '<div class="j-meta"><span class="j-day-badge">✏️ עריכת רגע – יום '+e.day+'</span></div>'+
+        '<textarea id="jEditText" placeholder="מה קרה שם?">'+esc(editing.textDraft||"")+'</textarea>'+
+        '<div class="j-chips"><span class="j-chip-label">שיוך לאטרקציה:</span>'+
+          (dd?dd.attrs.map(a=>'<button class="j-chip'+(editing.attr===a.name?" on":"")+'" onclick="jEditAttr(\''+esc(a.name).replace(/'/g,"\\'")+'\')">'+a.emoji+' '+esc(a.name)+'</button>').join(""):"")+
+        '</div>'+
+        '<div class="j-photos" id="eph_'+e.id+'"></div>'+
+        '<div style="font-size:.72rem;color:var(--muted);margin:4px 0 6px">💡 לחיצה על תמונה קיימת מסמנת אותה למחיקה (לחיצה נוספת מבטלת)</div>'+
+        '<div class="j-photo-row">'+editing.added.map(p=>'<img class="j-thumb" src="'+p.url+'">').join("")+'</div>'+
+        '<div class="j-btns">'+
+          '<button class="j-btn cam" onclick="document.getElementById(\'jECam\').click()">📷 צילום</button>'+
+          '<button class="j-btn cam" onclick="document.getElementById(\'jEGal\').click()">🖼️ מהגלריה</button>'+
+          '<button class="j-btn save" onclick="jEditSave()">💾 שמור שינויים</button>'+
+          '<button class="j-btn cam" onclick="jEditCancel()">ביטול</button>'+
+        '</div>'+
+        '<input type="file" id="jECam" accept="image/*" capture="environment" style="display:none" onchange="jEditAddPhotos(this)">'+
+        '<input type="file" id="jEGal" accept="image/*" multiple style="display:none" onchange="jEditAddPhotos(this)">'+
+      '</div>';
+    }
+    const dt = new Date(e.ts);
+    return '<div class="j-entry"><div class="j-meta"><span class="j-day-badge">יום '+e.day+'</span>'+
+      (e.attr?'<span class="j-day-badge">📍 '+esc(e.attr)+'</span>':"")+' '+
+      dt.getDate()+"."+(dt.getMonth()+1)+" "+String(dt.getHours()).padStart(2,"0")+":"+String(dt.getMinutes()).padStart(2,"0")+'</div>'+
+      (e.text?'<div class="j-text">'+esc(e.text)+'</div>':"")+
+      '<div class="j-photos" id="ph_'+e.id+'"></div>'+
+      '<div class="j-actions">'+
+        '<button onclick="jShare(\''+e.id+'\')">💬 שתף בוואטסאפ</button>'+
+        '<button onclick="jEdit(\''+e.id+'\')">✏️ ערוך</button>'+
+        '<button onclick="jDelete(\''+e.id+'\')">🗑️ מחק</button>'+
+      '</div></div>';
+  };
+  if(mine.length) html += mine.map(entryHtml).join("");
+  else html += '<div style="text-align:center;color:var(--muted);font-size:.85rem;margin:10px 0">עוד אין רגעים שמורים ליום הזה – תוסיפו את הראשון! ✨</div>';
+  if(others.length) html += '<div class="section-label" style="margin-top:14px">🗓️ מימים אחרים</div>'+others.map(entryHtml).join("");
+  return html;
+}
+
+/* ---------- trip summary export (chronological, shareable HTML file) ---------- */
+function blobToDataURL(b){
+  return new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(b); });
+}
+
+async function jExport(){
+  const entries = jGetEntries();
+  if(!entries.length){ alert("אין עדיין רגעים ביומן – תוסיפו קודם כמה 🙂"); return; }
+  const btn = document.getElementById("jExportBtn");
+  if(btn){ btn.disabled=true; btn.textContent="⏳ מכין את הסיכום שלכם..."; }
+  try{
+    let daysHtml = "";
+    for(const d of DAYS){
+      const es = entries.filter(e=>e.day===d.n).sort((a,b)=>a.ts-b.ts);
+      if(!es.length) continue;
+      let body = "";
+      for(const e of es){
+        let ph = "";
+        for(const pid of (e.photos||[])){
+          const b = await jdbGet(pid);
+          if(b) ph += '<img src="'+(await blobToDataURL(b))+'" alt="">';
+        }
+        body += '<div class="entry">'+
+          (e.attr?'<div class="attr">📍 '+esc(e.attr)+'</div>':"")+
+          (e.text?'<p>'+esc(e.text)+'</p>':"")+
+          (ph?'<div class="ph">'+ph+'</div>':"")+'</div>';
+      }
+      daysHtml += '<section><h2><span class="em">'+d.emoji+'</span> יום '+d.n+' · '+d.date+' · '+esc(d.area)+'</h2>'+body+'</section>';
+    }
+    const doc = '<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8">'+
+      '<meta name="viewport" content="width=device-width,initial-scale=1"><title>סיכום הטיול ליער השחור</title><style>'+
+      'body{margin:0;font-family:-apple-system,"Segoe UI",sans-serif;background:#faf9ff;color:#14101f}'+
+      'header{background:radial-gradient(400px 240px at 85% 0%,rgba(124,58,237,.55),transparent 65%),radial-gradient(360px 220px at 10% 30%,rgba(236,72,153,.4),transparent 60%),#120b26;color:#fff;text-align:center;padding:40px 16px 32px;border-radius:0 0 32px 32px}'+
+      'header h1{margin:0;font-size:1.7rem}header p{opacity:.85;margin:6px 0 0}'+
+      'section{max-width:640px;margin:22px auto;padding:0 14px}'+
+      'h2{font-size:1.15rem;border-bottom:3px solid #ec4899;padding-bottom:6px}h2 .em{font-size:1.4rem}'+
+      '.entry{background:#fff;border-radius:18px;box-shadow:0 6px 20px rgba(88,60,160,.12);padding:14px;margin-bottom:12px}'+
+      '.attr{font-size:.8rem;font-weight:800;color:#6d28d9;margin-bottom:4px}'+
+      '.entry p{margin:0;line-height:1.6;white-space:pre-wrap}'+
+      '.ph{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}'+
+      '.ph img{width:calc(50% - 4px);border-radius:14px;display:block}'+
+      'footer{text-align:center;color:#6b6480;font-size:.8rem;padding:20px}'+
+      '</style></head><body>'+
+      '<header><h1>🌲 הטיול שלנו ליער השחור 🌲</h1><p>13–25 באוגוסט 2026 · גואקיל & זייפרט</p></header>'+
+      daysHtml+
+      '<footer>נוצר מתוך יומן המסע שלנו 💜 '+new Date().toLocaleDateString("he-IL")+'</footer></body></html>';
+    jShowPreview(doc);
+  }catch(err){ /* ignore */ }
+  if(btn){ btn.disabled=false; btn.textContent="📕 צור סיכום טיול לשיתוף – כל הימים, הרגעים והתמונות"; }
+}
+
+let lastSummaryDoc = null;
+function jShowPreview(doc){
+  lastSummaryDoc = doc;
+  const bg = document.createElement("div");
+  bg.className = "prev-bg"; bg.id = "prevBg";
+  bg.innerHTML = '<div class="prev-title">👀 ככה ייראה הסיכום שלכם – מרוצים?</div>'+
+    '<iframe class="prev-frame" id="prevFrame"></iframe>'+
+    '<div class="prev-actions">'+
+      '<button class="prev-share" onclick="jShareSummary()">📤 שתף</button>'+
+      '<button class="prev-close" onclick="jClosePreview()">✖ סגור</button>'+
+    '</div>';
+  document.body.appendChild(bg);
+  document.getElementById("prevFrame").srcdoc = doc;
+}
+function jClosePreview(){
+  const bg = document.getElementById("prevBg");
+  if(bg) bg.remove();
+  lastSummaryDoc = null;
+}
+async function jShareSummary(){
+  if(!lastSummaryDoc) return;
+  const file = new File([lastSummaryDoc], "סיכום-הטיול-יער-השחור.html", {type:"text/html"});
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:"סיכום הטיול ליער השחור"});
+      jClosePreview();
+    } else {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(file); a.download = "trip-summary.html";
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+  }catch(err){ /* user cancelled share – keep preview open */ }
+}
+
+async function fillJournalPhotos(){
+  for(const e of jGetEntries()){
+    const isEdit = editing && editing.id===e.id;
+    const box = document.getElementById((isEdit?"eph_":"ph_")+e.id);
+    if(!box) continue;
+    box.innerHTML = "";
+    for(const pid of (e.photos||[])){
+      const b = await jdbGet(pid);
+      if(!b) continue;
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(b);
+      if(isEdit){
+        if(editing.removed.includes(pid)){ img.style.opacity=".3"; img.style.outline="3px solid #ef4444"; }
+        img.onclick = ()=>jEditTogglePhoto(pid);
+      } else {
+        img.onclick = ()=>{ const w=window.open("","_blank"); if(w) w.document.write('<img src="'+img.src+'" style="max-width:100%">'); };
+      }
+      box.appendChild(img);
+    }
+  }
+}
+
+function refreshJournal(clearText){
+  const sc = document.getElementById("sheetContent");
+  if(sc && sc.querySelector(".j-form")){
+    const ta = document.getElementById("jText"); const v = ta?ta.value:"";
+    if(editing){ const eta = document.getElementById("jEditText"); if(eta) editing.textDraft = eta.value; }
+    sc.innerHTML = journalHtml(DAYS[selected]);
+    const ta2 = document.getElementById("jText");
+    if(ta2 && !clearText) ta2.value = v;
+    fillJournalPhotos();
+  }
+}
+
+/* ---------- init ---------- */
+document.getElementById("prevBtn").onclick = ()=>{ if(selected>0){selected--; renderAll();} };
+document.getElementById("nextBtn").onclick = ()=>{ if(selected<DAYS.length-1){selected++; renderAll();} };
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowLeft") document.getElementById("nextBtn").click();
+  if(e.key==="ArrowRight") document.getElementById("prevBtn").click();
+  if(e.key==="Escape") closeSheet();
+});
+let touchX=null;
+document.addEventListener("touchstart",e=>{touchX=e.touches[0].clientX});
+document.addEventListener("touchend",e=>{
+  if(touchX===null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if(Math.abs(dx)>70){ if(dx>0) document.getElementById("nextBtn").click(); else document.getElementById("prevBtn").click(); }
+  touchX=null;
+});
+
+const ti = todayIndex();
+selected = (ti>=0 && ti<=12) ? ti : 0;
+renderAll();
+
+/* offline support: register service worker (only when hosted, e.g. Amplify) */
+if("serviceWorker" in navigator && location.protocol === "https:"){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
