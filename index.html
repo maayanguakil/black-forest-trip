@@ -346,7 +346,7 @@
 
   <div class="btn-israel-time" id="israelTime">🕒 השעה בבית: --:--</div>
 
-  <a class="btn-flight" href="https://docs.google.com/document/d/1WCx9emQ6mtOZcmAFgflIttj3YwQ9HOhabCK5baVvLjg/edit?usp=sharing" target="_blank" rel="noopener">✈️ פרטי טיסה וביטוח</a>
+  <a class="btn-flight" id="flightBtn" href="https://docs.google.com/document/d/1WCx9emQ6mtOZcmAFgflIttj3YwQ9HOhabCK5baVvLjg/edit?usp=sharing" target="_blank" rel="noopener">✈️ פרטי טיסה וביטוח</a>
 
   <div id="content"></div>
 
@@ -751,6 +751,7 @@ function renderDay(){
   document.getElementById("daySub").textContent = "יום "+d.dow+" · "+d.date+".2026";
   document.getElementById("prevBtn").disabled = selected===0;
   document.getElementById("nextBtn").disabled = selected===DAYS.length-1;
+  document.getElementById("flightBtn").style.display = (d.n===1 || d.n===13) ? "" : "none";
 
   let html = "";
 
