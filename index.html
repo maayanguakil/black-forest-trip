@@ -182,6 +182,12 @@
     display:flex; align-items:center; justify-content:center; gap:8px;
   }
   .btn-flight:active{transform:scale(.98)}
+  .btn-israel-time{
+    width:100%; border:none; border-radius:var(--radius); box-shadow:0 4px 14px rgba(15,23,42,.25);
+    background:linear-gradient(90deg,#0f172a,#334155); color:#fff; font-family:inherit; text-decoration:none;
+    font-weight:700; font-size:.82rem; padding:8px; cursor:default; margin-bottom:8px;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
 
   /* ---------- weather + trivia ---------- */
   .wx{
@@ -337,6 +343,8 @@
     </div>
     <button id="nextBtn" aria-label="יום הבא">←</button>
   </div>
+
+  <div class="btn-israel-time" id="israelTime">🕒 השעה בבית: --:--</div>
 
   <a class="btn-flight" href="https://docs.google.com/document/d/1WCx9emQ6mtOZcmAFgflIttj3YwQ9HOhabCK5baVvLjg/edit?usp=sharing" target="_blank" rel="noopener">✈️ פרטי טיסה וביטוח</a>
 
@@ -1232,6 +1240,15 @@ document.addEventListener("touchend",e=>{
 const ti = todayIndex();
 selected = (ti>=0 && ti<=12) ? ti : 0;
 renderAll();
+
+/* ---------- Israel clock ---------- */
+function renderIsraelTime(){
+  const el = document.getElementById("israelTime");
+  const time = new Date().toLocaleTimeString("he-IL", { timeZone:"Asia/Jerusalem", hour:"2-digit", minute:"2-digit" });
+  el.textContent = "🕒 השעה בבית: " + time;
+}
+renderIsraelTime();
+setInterval(renderIsraelTime, 1000);
 
 /* offline support: register service worker (only when hosted, e.g. Amplify) */
 if("serviceWorker" in navigator && location.protocol === "https:"){
